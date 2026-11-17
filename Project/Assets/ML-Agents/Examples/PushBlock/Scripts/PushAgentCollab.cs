@@ -9,6 +9,8 @@ public class PushAgentCollab : Agent
     private PushBlockSettings m_PushBlockSettings;
     private Rigidbody m_AgentRb;  //cached on initialization
 
+    [HideInInspector] public PushBlockEnvController Env;
+
     protected override void Awake()
     {
         base.Awake();
@@ -19,6 +21,14 @@ public class PushAgentCollab : Agent
     {
         // Cache the agent rb
         m_AgentRb = GetComponent<Rigidbody>();
+    }
+
+    void OnCollisionStay(Collision col)
+    {
+        if (Env != null && col.rigidbody != null && Env.IsBlock(col.rigidbody))
+        {
+            Env.ReportContact(this, col.rigidbody);
+        }
     }
 
     /// <summary>

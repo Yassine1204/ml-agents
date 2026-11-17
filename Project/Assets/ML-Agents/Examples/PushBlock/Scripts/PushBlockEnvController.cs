@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.MLAgents;
 using UnityEngine;
-
+ 
 public class PushBlockEnvController : MonoBehaviour
 {
     [System.Serializable]
@@ -27,6 +27,10 @@ public class PushBlockEnvController : MonoBehaviour
         public Quaternion StartingRot;
         [HideInInspector]
         public Rigidbody Rb;
+        [HideInInspector]
+        public int Required;
+        [HideInInspector]
+        public float PrevDist;
     }
 
     /// <summary>
@@ -71,6 +75,11 @@ public class PushBlockEnvController : MonoBehaviour
 
     private int m_ResetTimer;
 
+    private Transform m_Goal;
+    private Dictionary<Rigidbody, HashSet<PushAgentCollab>> m_Touching =
+        new Dictionary<Rigidbody, HashSet<PushAgentCollab>>();
+    private int m_EpSteps, m_EpContactSteps, m_EpCoopSteps;
+
     void Start()
     {
 
@@ -81,12 +90,14 @@ public class PushBlockEnvController : MonoBehaviour
         // Starting material
         m_GroundMaterial = m_GroundRenderer.material;
         m_PushBlockSettings = FindObjectOfType<PushBlockSettings>();
+        m_Goal = area.transform.Find("Goal");
         // Initialize Blocks
         foreach (var item in BlocksList)
         {
             item.StartingPos = item.T.transform.position;
             item.StartingRot = item.T.transform.rotation;
             item.Rb = item.T.GetComponent<Rigidbody>();
+            item.Required = Mathf.RoundToInt(item.T.GetComponent<GoalDetectTrigger>().GoalValue);
         }
         // Initialize TeamManager
         m_AgentGroup = new SimpleMultiAgentGroup();
@@ -95,6 +106,7 @@ public class PushBlockEnvController : MonoBehaviour
             item.StartingPos = item.Agent.transform.position;
             item.StartingRot = item.Agent.transform.rotation;
             item.Rb = item.Agent.GetComponent<Rigidbody>();
+            item.Agent.Env = this;
             m_AgentGroup.RegisterAgent(item.Agent);
         }
         ResetScene();
@@ -102,15 +114,65 @@ public class PushBlockEnvController : MonoBehaviour
 
     void FixedUpdate()
     {
+        TrackStep();
+
         m_ResetTimer += 1;
         if (m_ResetTimer >= MaxEnvironmentSteps && MaxEnvironmentSteps > 0)
         {
+            RecordEpisode(false);
             m_AgentGroup.GroupEpisodeInterrupted();
             ResetScene();
         }
 
         //Hurry Up Penalty
         m_AgentGroup.AddGroupReward(-0.5f / MaxEnvironmentSteps);
+    }
+
+    public void ReportContact(PushAgentCollab a, Rigidbody block)
+    {
+        if (!m_Touching.TryGetValue(block, out var set))
+        {
+            set = new HashSet<PushAgentCollab>();
+            m_Touching[block] = set;
+        }
+        set.Add(a);
+    }
+
+    public bool IsBlock(Rigidbody rb)
+    {
+        foreach (var b in BlocksList) if (b.Rb == rb) return true;
+        return false;
+    }
+
+    void TrackStep()
+    {
+        bool anyContact = false, anyCoop = false;
+        foreach (var b in BlocksList)
+        {
+            if (!b.T.gameObject.activeSelf) continue;
+            int touching = m_Touching.TryGetValue(b.Rb, out var set) ? set.Count : 0;
+            float d = Vector3.Distance(b.T.position, m_Goal.position);
+            bool closer = d < b.PrevDist - 0.001f;
+            b.PrevDist = d;
+            if (touching > 0) anyContact = true;
+            if (b.Required >= 2 && touching >= b.Required && closer) anyCoop = true;
+        }
+        m_EpSteps++;
+        if (anyContact) m_EpContactSteps++;
+        if (anyCoop) m_EpCoopSteps++;
+        m_Touching.Clear();
+    }
+
+    void RecordEpisode(bool success)
+    {
+        var s = Academy.Instance.StatsRecorder;
+        float steps = Mathf.Max(1, m_EpSteps);
+        s.Add("Custom/Success", success ? 1f : 0f);
+        s.Add("Custom/BlocksScoredFraction", (BlocksList.Count - m_NumberOfRemainingBlocks) / (float)BlocksList.Count);
+        s.Add("Custom/EpisodeSteps", m_EpSteps);
+        s.Add("Custom/ContactFraction", m_EpContactSteps / steps);
+        s.Add("Custom/CooperationFraction", m_EpCoopSteps / steps);
+        s.Add("Custom/NumAgents", AgentsList.Count);
     }
 
     /// <summary>
@@ -185,6 +247,7 @@ public class PushBlockEnvController : MonoBehaviour
 
         if (done)
         {
+            RecordEpisode(true);
             //Reset assets
             m_AgentGroup.EndGroupEpisode();
             ResetScene();
@@ -199,6 +262,9 @@ public class PushBlockEnvController : MonoBehaviour
     public void ResetScene()
     {
         m_ResetTimer = 0;
+        m_EpSteps = 0;
+        m_EpContactSteps = 0;
+        m_EpCoopSteps = 0;
 
         //Random platform rotation
         var rotation = Random.Range(0, 4);
@@ -226,6 +292,7 @@ public class PushBlockEnvController : MonoBehaviour
             item.Rb.velocity = Vector3.zero;
             item.Rb.angularVelocity = Vector3.zero;
             item.T.gameObject.SetActive(true);
+            item.PrevDist = Vector3.Distance(item.T.position, m_Goal.position);
         }
 
         //Reset counter
