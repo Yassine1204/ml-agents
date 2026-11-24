@@ -62,8 +62,8 @@ def write_yaml(run, base_yaml, out_dir): #This function will take the standard Y
     behavior["hyperparameters"]["learning_rate"] = run["learning_rate"]
     behavior["hyperparameters"]["batch_size"] = run["batch_size"]
     behavior["hyperparameters"]["buffer_size"] = run["buffer_size"]
-    behavior["hyperparameters"]["hidden_units"] = run["hidden_units"]
-    behavior["hyperparameters"]["num_layers"] = run["num_layers"]
+    behavior["network_settings"]["hidden_units"] = run["hidden_units"]
+    behavior["network_settings"]["num_layers"] = run["num_layers"]
     behavior["max_steps"] = run["max_steps"]
 
     out_dir.mkdir(parents=True, exist_ok=True)
