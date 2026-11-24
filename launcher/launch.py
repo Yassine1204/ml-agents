@@ -32,7 +32,7 @@ def read_plan(path):
     with open(path, newline="") as f:
         rows = list(csv.DictReader(f, skipinitialspace=true))
     try:
-        return [{name: kind(row[name]) for name, kind in TYPES.items()} for row in rows]
+        return [{name: kind(row[name]) for name, kind in TYPES.items()} for row in rows] #Here we read from the run_plan the settings, and send them to main where they will be bundled into separate runs
     except (KeyError, ValueError) as err:
         sys.exit(f"There is a problem in {path}: {error!r}.")
 
@@ -66,10 +66,43 @@ def write_yaml(run, base_yaml, out_dir): #This function will take the standard Y
     behavior["network_settings"]["num_layers"] = run["num_layers"]
     behavior["max_steps"] = run["max_steps"]
 
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{run['run_id']}.yaml"
+    out_dir.mkdir(parents=True, exist_ok=True) #makes the folder where all the edited yaml files will be in
+    out_path = out_dir / f"{run['run_id']}.yaml" #builds file name of the copy
 
-    with open(out_path, "w") as f:
-        yaml.safe_dump(cfg, f, sort_keys=False)
+    with open(out_path, "w") as f: #w just means replacing the file if it exists
+        yaml.safe_dump(cfg, f, sort_keys=False) #here we write the edited version of yaml down
     
     return out_path
+
+
+def build_command(run, yaml_path, exe, log_path): #Here we make the command that we earlier had to type out by hand each time.
+    return [
+        "mlagents-learn" , str(yaml_path),
+        f"--run-id={run['run_id']}",
+        f"--env={exe}",
+        f"--seed={run['seed']}",
+        "--env-args", "-logfile", str(log_path), #log path logs the run and we can consult it if something goes wrong to see what went wrong
+    ]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run", action="store_true")
+    args = parser.parse_args()
+
+    plan_file = "launcher/run_plan.csv" #where it all starts
+    machine_file = "launcher/machine.json"
+
+    with open(machine_file) as f:
+        machine = json.load(f) #stores the machine file now
+    base_yaml = machine["base_yaml"] #path to the master YAML file from where will be making copies
+    exe = machine["build"] #path to the executable of the Unity scene we use for runs
+
+
+    
+    results_dir = Path("results")
+    logs_dir = Path("logs")
+    yaml_dir = Path("config/poca/runs")
+
+
+    runs = read_plan(plan_file) #We get all the runs from the csv run_plan and start passing them out
