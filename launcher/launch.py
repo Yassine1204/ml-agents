@@ -51,3 +51,25 @@ def check_run(run):
         problems.append("max_steps can't be negative man")
 
     return problems
+
+
+def write_yaml(run, base_yaml, out_dir): #This function will take the standard YAML file and change a couple of settings we want to change
+    with open(base_yaml) as f: #base_yaml is determined by machine.json
+        cfg = yaml.safe_load(f)
+    
+    behavior = cfg["behaviors"][BEHAVIOR] #we walk down two levels here
+    #The next part writes in the changes we want to the copy YAML
+    behavior["hyperparameters"]["learning_rate"] = run["learning_rate"]
+    behavior["hyperparameters"]["batch_size"] = run["batch_size"]
+    behavior["hyperparameters"]["buffer_size"] = run["buffer_size"]
+    behavior["hyperparameters"]["hidden_units"] = run["hidden_units"]
+    behavior["hyperparameters"]["num_layers"] = run["num_layers"]
+    behavior["max_steps"] = run["max_steps"]
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{run['run_id']}.yaml"
+
+    with open(out_path, "w") as f:
+        yaml.safe_dump(cfg, f, sort_keys=False)
+    
+    return out_path
