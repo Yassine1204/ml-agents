@@ -1,4 +1,10 @@
 {
     "base_yaml": "config/poca/PushBlockCollab.yaml",
-    "build": "C:/Users/Main/Documents/TrackA/UnityEnvironment.exe"
+    "build": "C:/Users/Main/Documents/TrackA/UnityEnvironment.exe",
+    "owner": "Yassine",
+    "cpu_model": "Intel(R) Core(TM) Ultra 7 155H",
+    "cpu_cores": 16,
+    "ram_gb": 16,
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU + Intel(R) Arc(TM) Graphics"
+
 }
