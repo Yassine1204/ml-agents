@@ -114,7 +114,7 @@ def main():
     bad = 0 #counts amount of faulty runs. Should be 0
     seen = set()
     if not Path(exe).exists(): #This checks if there is a path to the Unity Executable build
-        sys.exit(f"Build path isn't correct: {exe}\n");
+        sys.exit(f"Build path isn't correct: {exe}\n")
     
     for run in runs: #Now we are just going to check each run read from the run_plan with the three checks in the check_run function
         problems = check_run(run)
