@@ -11,7 +11,7 @@ import yaml
 # It stops a run with the wrong configurations instead of wasting a couple of hours. 
 RANGES = { 
     "learning_rate": (0.0001, 0.0006),
-    "batch_size": (256, 2058),
+    "batch_size": (256, 2048),
     "hidden_units": (128, 512),
     "num_layers": (1, 3),
 }
