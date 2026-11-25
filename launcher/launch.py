@@ -132,5 +132,44 @@ def main():
     else:
         print("Plan is oke.")
 
-
     
+    #Here we start with the runs:
+    started = []
+    skipped = []
+    failed = []
+
+    try:
+        for run in runs:
+            run_id = run["run_id"]
+            if(results_dir / run_id).exists(): #check if run already done. If yes we are going to ignore it
+                skipped.append(run_id)
+                print(f"Skip {run_id} because it already exists in the result folder")
+                continue #skip this run in loop
+
+            yaml_path = write_yaml(run, base_yaml, yaml_dir) #makes and returns the path to the special version yaml for this particular run
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            log_path = (logs_dir / f"{run_id}.log").resolve() #resolve gives full address, which is needed for Unity build which starts from its own folder
+
+            command = build_command(run, yaml_path, log_path)
+
+            print(f"{run_id}")
+
+            if args.run: #real run
+                code = subprocess.run(command).returncode #starts the run
+                if code != 0:
+                    failed.append(run_id)
+                else:
+                    started.append(run_id)
+            else: #dry run just for testing
+                started.append(run_id)
+    
+    except KeyboardInterrupt: #allows for us to stop this all if we want to
+        print("\n You have interrupted the runs. Nothing else will be started")
+
+    #The final balance sheet. We have the dry mode which says would run instead of finished
+    print(f"Final result: {'finished' if args.run else 'would run'}={started} skipped{skipped} failed={failed}")
+
+
+#This is the starting button to all the rest:
+if __name__ == "__main__":
+    main()
