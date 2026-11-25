@@ -100,9 +100,37 @@ def main():
 
 
     
-    results_dir = Path("results")
-    logs_dir = Path("logs")
-    yaml_dir = Path("config/poca/runs")
+    results_dir = Path("results") #folder where results about run are saved
+    logs_dir = Path("logs") #folder where logs about run are saved
+    yaml_dir = Path("config/poca/runs") #folder where all the yaml versions are
 
 
     runs = read_plan(plan_file) #We get all the runs from the csv run_plan and start passing them out
+
+
+
+
+
+    bad = 0 #counts amount of faulty runs. Should be 0
+    seen = set()
+    if not Path(exe).exists(): #This checks if there is a path to the Unity Executable build
+        sys.exit(f"Build path isn't correct: {exe}\n");
+    
+    for run in runs: #Now we are just going to check each run read from the run_plan with the three checks in the check_run function
+        problems = check_run(run)
+        if run["run_id"] in seen:
+            problems.append("run_id appears two times in the run plan.")
+        seen.add(run["run_id"]) #so we can check for doubles
+        
+
+        for p in problems: #Now exposing all the errors of a particular run so we know what is gonig on
+            print(f"Problem {run['run_id']}: {p}")
+        bad += bool(problems)
+
+    if bad: #if problems have been found
+        sys.exit(f"\n{bad} runs are not good")
+    else:
+        print("Plan is oke.")
+
+
+    
