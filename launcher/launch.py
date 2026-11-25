@@ -10,10 +10,10 @@ import yaml
 #This defines the limits of the settings. It's a safety net so the launcher knows what is allowed.
 # It stops a run with the wrong configurations instead of wasting a couple of hours. 
 RANGES = { 
-    "learning_rate": (),
-    "batch_size": (),
-    "hidden_units": (),
-    "num_layers": (),
+    "learning_rate": (0.0001, 0.0006),
+    "batch_size": (256, 2058),
+    "hidden_units": (128, 512),
+    "num_layers": (1, 3),
 }
 
 BEHAVIOR = "PushBlockCollab" #name of section where settings live. now launcher knows where to write new values in YAML file
@@ -30,11 +30,11 @@ TYPES = {
 #This functions reads the run_plan.csv
 def read_plan(path):
     with open(path, newline="") as f:
-        rows = list(csv.DictReader(f, skipinitialspace=true))
+        rows = list(csv.DictReader(f, skipinitialspace=True))
     try:
         return [{name: kind(row[name]) for name, kind in TYPES.items()} for row in rows] #Here we read from the run_plan the settings, and send them to main where they will be bundled into separate runs
     except (KeyError, ValueError) as err:
-        sys.exit(f"There is a problem in {path}: {error!r}.")
+        sys.exit(f"There is a problem in {path}: {err!r}.")
 
 
 
@@ -81,7 +81,7 @@ def build_command(run, yaml_path, exe, log_path): #Here we make the command that
         f"--run-id={run['run_id']}",
         f"--env={exe}",
         f"--seed={run['seed']}",
-        "--env-args", "-logfile", str(log_path), #log path logs the run and we can consult it if something goes wrong to see what went wrong
+        "--env-args", "-logFile", str(log_path), #log path logs the run and we can consult it if something goes wrong to see what went wrong
     ]
 
 
@@ -150,7 +150,7 @@ def main():
             logs_dir.mkdir(parents=True, exist_ok=True)
             log_path = (logs_dir / f"{run_id}.log").resolve() #resolve gives full address, which is needed for Unity build which starts from its own folder
 
-            command = build_command(run, yaml_path, log_path)
+            command = build_command(run, yaml_path, exe, log_path)
 
             print(f"{run_id}")
 
@@ -167,7 +167,7 @@ def main():
         print("\n You have interrupted the runs. Nothing else will be started")
 
     #The final balance sheet. We have the dry mode which says would run instead of finished
-    print(f"Final result: {'finished' if args.run else 'would run'}={started} skipped{skipped} failed={failed}")
+    print(f"Final result: {'finished' if args.run else 'would run'}={started} skipped={skipped} failed={failed}")
 
 
 #This is the starting button to all the rest:
